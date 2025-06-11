@@ -1,11 +1,22 @@
-// --- IMPORTACIÓN DE DATOS EXTERNOS (SINTAXIS CORREGIDA) ---
-import { eventData } from './data/eventData.js';
-import { distortionEventsData } from './data/distortionEvents.js';
-import { allBonusData, bonusMissionData, bonusLaProfeciaData, bonusLaVeneData } from './data/bonusMissions.js';
+// Este es el archivo principal. Ahora está mucho más limpio porque
+// todos los datos del juego se cargan desde js/data.js en la variable GAME_DATA.
+
+// --- REFERENCIAS A LOS DATOS GLOBALES DEL JUEGO ---
+// Se asume que GAME_DATA ya existe porque js/data.js se carga primero.
+const {
+    eventData,
+    distortionEventsData,
+    allBonusData,
+    bonusMissionData,
+    bonusLaProfeciaData,
+    bonusLaVeneData
+} = GAME_DATA;
+
 
 // --- CONFIGURACIÓN DEL BACKEND ---
 // URL actualizada para incluir la función del ranking.
 const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbym5-onTOyzlqZn_G4O-5acxAZzReYjIOY5SF8tBh3TtT2jEFVw6IZ2MMMtkHGtRl0F/exec';
+
 
 // --- FUNCIONES GLOBALES DE AYUDA ---
 const formatTime = (totalSeconds) => {
@@ -59,18 +70,15 @@ const generarPistaDinamica = (respuesta) => {
 
 // --- INICIO: FUNCIONES DE FEEDBACK SENSORIAL (VIBRACIÓN Y ANIMACIÓN) ---
 const triggerVibration = (duration = 100) => {
-    // Esta función depende de la configuración del navegador y del dispositivo del usuario.
     if ('vibrate' in navigator) {
         navigator.vibrate(duration);
     }
 };
 
-// <<< INICIO: MODIFICACIÓN DE ANIMACIÓN DE PUNTOS >>>
 const animatePoints = (points, originElementId) => {
     const destination = document.getElementById('score-display');
     const origin = document.getElementById(originElementId);
 
-    // Se verifica que ambos elementos existan para evitar errores.
     if (!destination || !origin) {
         console.error("Elemento de destino u origen no encontrado para la animación.");
         return;
@@ -79,8 +87,7 @@ const animatePoints = (points, originElementId) => {
     const pointsFlyer = document.createElement('div');
     pointsFlyer.textContent = `+${points}`;
     
-    // Estilos para que la animación sea prominente y visible.
-    pointsFlyer.style.position = 'fixed'; // Clave: Posición relativa a la ventana del navegador.
+    pointsFlyer.style.position = 'fixed';
     pointsFlyer.style.zIndex = '10000';
     pointsFlyer.style.padding = '8px 16px';
     pointsFlyer.style.backgroundColor = 'var(--color-feedback-success-dark, #2a9d8f)';
@@ -91,22 +98,19 @@ const animatePoints = (points, originElementId) => {
     pointsFlyer.style.border = '2px solid #FFFFFF';
     pointsFlyer.style.boxShadow = '0 0 15px rgba(0,0,0,0.5)';
     pointsFlyer.style.pointerEvents = 'none';
-    pointsFlyer.style.transform = 'translate(-50%, -50%)'; // Ayuda a centrar el elemento en sus coordenadas.
+    pointsFlyer.style.transform = 'translate(-50%, -50%)';
 
     document.body.appendChild(pointsFlyer);
 
     const destRect = destination.getBoundingClientRect();
     const originRect = origin.getBoundingClientRect();
 
-    // Punto de partida: Centro horizontal de la pantalla, a la altura del botón presionado.
     const startX = window.innerWidth / 2;
     const startY = originRect.top + originRect.height / 2;
 
-    // Punto final: El centro del marcador de puntaje en el encabezado.
     const endX = destRect.left + destRect.width / 2;
     const endY = destRect.top + destRect.height / 2;
 
-    // Secuencia de animación con GSAP para un efecto más dinámico.
     gsap.fromTo(pointsFlyer, 
         { 
             left: startX, 
@@ -115,30 +119,27 @@ const animatePoints = (points, originElementId) => {
             opacity: 0,
         }, 
         { 
-            scale: 1.2, // Crece hasta ser grande para llamar la atención.
+            scale: 1.2,
             opacity: 1,
-            duration: 0.6, // Duración corta para un efecto de "pop".
+            duration: 0.6,
             ease: 'power3.out',
             onComplete: () => {
-                // Después de aparecer, espera un momento y luego viaja hacia el marcador.
                 gsap.to(pointsFlyer, {
                     left: endX,
                     top: endY,
-                    scale: 0.1, // Se encoge al llegar al destino.
+                    scale: 0.1,
                     opacity: 0,
-                    duration: 1.0, // Un viaje más lento para que sea fácil de seguir.
+                    duration: 1.0,
                     ease: 'power1.in',
-                    delay: 0.4, // Pausa en el centro antes de viajar.
+                    delay: 0.4,
                     onComplete: () => {
-                        pointsFlyer.remove(); // Limpieza del DOM para no dejar elementos basura.
+                        pointsFlyer.remove();
                     }
                 });
             }
         }
     );
 };
-// <<< FIN: MODIFICACIÓN DE ANIMACIÓN DE PUNTOS >>>
-
 
 async function sendResultsToBackend(data) {
     const timeToSend = data.finalTimeDisplay || formatTime(data.mainTimer);
@@ -166,7 +167,6 @@ async function sendResultsToBackend(data) {
     }
 }
 
-
 async function sendBonusResultToBackend(data) {
     console.log('%c[ETAPA 3] Intentando enviar datos del bonus al backend.', 'color: #22CC22; font-size: 14px; font-weight: bold;');
     console.log('Datos que se enviarán:', data);
@@ -193,8 +193,9 @@ async function sendBonusResultToBackend(data) {
     }
 }
 
-
 // --- COMPONENTES DE REACT ---
+// ... (El código de todos tus componentes, desde DistortionEventPage hasta el final, va aquí.
+//      No ha cambiado nada dentro de los componentes mismos.)
 
 const DistortionEventPage = ({ event, onComplete }) => {
     const [view, setView] = React.useState('visual');
