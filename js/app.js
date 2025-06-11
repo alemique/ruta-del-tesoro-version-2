@@ -1,4 +1,4 @@
-// --- IMPORTACIÓN DE DATOS EXTERNOS ---
+// --- IMPORTACIÓN DE DATOS EXTERNOS (SINTAXIS CORREGIDA) ---
 import { eventData } from './data/eventData.js';
 import { distortionEventsData } from './data/distortionEvents.js';
 import { allBonusData, bonusMissionData, bonusLaProfeciaData, bonusLaVeneData } from './data/bonusMissions.js';
