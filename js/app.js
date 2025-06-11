@@ -10,193 +10,155 @@ const {
 
 const {
     Header,
-    LoginPage
+    LoginPage,
+    // Próximamente añadiremos más componentes aquí
 } = GAME_COMPONENTS;
-
-
-// --- CONFIGURACIÓN Y FUNCIONES DE AYUDA ---
-const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbym5-onTOyzlqZn_G4O-5acxAZzReYjIOY5SF8tBh3TtT2jEFVw6IZ2MMMtkHGtRl0F/exec';
-
-const formatTime = (totalSeconds) => {
-    const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
-    const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
-    const seconds = String(totalSeconds % 60).padStart(2, '0');
-    return `${hours}:${minutes}:${seconds}`;
-};
-
-// ... Aquí va el resto de tus funciones de ayuda: generarPistaDinamica, triggerVibration, etc.
-// El código de estas funciones NO cambia.
-const generarPistaDinamica = (respuesta) => {
-    const respuestaSinEspacios = respuesta.replace(/ /g, '');
-    const longitud = respuestaSinEspacios.length;
-    let cantidadARevelar;
-
-    if (longitud <= 4) {
-        cantidadARevelar = 1;
-    } else if (longitud <= 8) {
-        cantidadARevelar = 2;
-    } else if (longitud <= 12) {
-        cantidadARevelar = 3;
-    } else {
-        cantidadARevelar = 4;
-    }
-
-    const indicesLetras = [];
-    respuesta.split('').forEach((char, index) => {
-        if (char !== ' ') {
-            indicesLetras.push(index);
-        }
-    });
-
-    for (let i = indicesLetras.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [indicesLetras[i], indicesLetras[j]] = [indicesLetras[j], indicesLetras[i]];
-    }
-
-    const indicesARevelar = new Set(indicesLetras.slice(0, cantidadARevelar));
-
-    const pistaGenerada = respuesta.split('').map((char, index) => {
-        if (char === ' ') {
-            return ' ';
-        }
-        if (indicesARevelar.has(index)) {
-            return char;
-        }
-        return '_';
-    }).join('');
-
-    return pistaGenerada;
-};
-
-const triggerVibration = (duration = 100) => {
-    if ('vibrate' in navigator) {
-        navigator.vibrate(duration);
-    }
-};
-
-const animatePoints = (points, originElementId) => {
-    const destination = document.getElementById('score-display');
-    const origin = document.getElementById(originElementId);
-
-    if (!destination || !origin) {
-        console.error("Elemento de destino u origen no encontrado para la animación.");
-        return;
-    }
-
-    const pointsFlyer = document.createElement('div');
-    pointsFlyer.textContent = `+${points}`;
-    
-    pointsFlyer.style.position = 'fixed';
-    pointsFlyer.style.zIndex = '10000';
-    pointsFlyer.style.padding = '8px 16px';
-    pointsFlyer.style.backgroundColor = 'var(--color-feedback-success-dark, #2a9d8f)';
-    pointsFlyer.style.color = '#FFFFFF';
-    pointsFlyer.style.fontWeight = 'bold';
-    pointsFlyer.style.fontSize = '1.5rem';
-    pointsFlyer.style.borderRadius = '20px';
-    pointsFlyer.style.border = '2px solid #FFFFFF';
-    pointsFlyer.style.boxShadow = '0 0 15px rgba(0,0,0,0.5)';
-    pointsFlyer.style.pointerEvents = 'none';
-    pointsFlyer.style.transform = 'translate(-50%, -50%)';
-
-    document.body.appendChild(pointsFlyer);
-
-    const destRect = destination.getBoundingClientRect();
-    const originRect = origin.getBoundingClientRect();
-
-    const startX = window.innerWidth / 2;
-    const startY = originRect.top + originRect.height / 2;
-
-    const endX = destRect.left + destRect.width / 2;
-    const endY = destRect.top + destRect.height / 2;
-
-    gsap.fromTo(pointsFlyer, 
-        { 
-            left: startX, 
-            top: startY, 
-            scale: 0,
-            opacity: 0,
-        }, 
-        { 
-            scale: 1.2,
-            opacity: 1,
-            duration: 0.6,
-            ease: 'power3.out',
-            onComplete: () => {
-                gsap.to(pointsFlyer, {
-                    left: endX,
-                    top: endY,
-                    scale: 0.1,
-                    opacity: 0,
-                    duration: 1.0,
-                    ease: 'power1.in',
-                    delay: 0.4,
-                    onComplete: () => {
-                        pointsFlyer.remove();
-                    }
-                });
-            }
-        }
-    );
-};
-
-async function sendResultsToBackend(data) {
-    const timeToSend = data.finalTimeDisplay || formatTime(data.mainTimer);
-
-    if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes('URL_QUE_COPIASTE')) {
-        console.warn("URL del script no configurada. No se enviarán los datos.");
-        return;
-    }
-    const payload = {
-        teamName: data.teamName,
-        totalTime: timeToSend,
-        totalScore: data.score,
-        missionResults: data.missionResults
-    };
-    try {
-        const formData = new FormData();
-        formData.append('payload', JSON.stringify(payload));
-        
-        await fetch(`${GOOGLE_SCRIPT_URL}?action=saveResults`, {
-            method: 'POST',
-            body: formData,
-        });
-    } catch (error) {
-        console.error("Error al enviar la actualización al backend:", error);
-    }
-}
-
-async function sendBonusResultToBackend(data) {
-    console.log('%c[ETAPA 3] Intentando enviar datos del bonus al backend.', 'color: #22CC22; font-size: 14px; font-weight: bold;');
-    console.log('Datos que se enviarán:', data);
-
-    if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes('URL_QUE_COPIASTE')) {
-        console.warn("URL del script no configurada. No se enviarán los datos del bonus.");
-        return;
-    }
-
-    const params = new URLSearchParams({
-        action: 'saveBonusResult',
-        teamName: data.teamName,
-        bonusId: data.bonusId,
-        points: data.points
-    });
-
-    try {
-        await fetch(`${GOOGLE_SCRIPT_URL}?${params.toString()}`, {
-            method: 'POST'
-        });
-        console.log(`%cResultado del bonus ${data.bonusId} enviado (supuestamente) con éxito.`, 'color: #22CC22;');
-    } catch (error) {
-        console.error("Error CRÍTICO al enviar el resultado del bonus al backend:", error);
-    }
-}
 
 
 // --- COMPONENTES DE REACT (RESTANTES, AÚN DENTRO DE APP.JS) ---
 // NOTA: DistortionEventPage, EnRutaPage, etc., siguen aquí por ahora. Los moveremos después.
 
-const DistortionEventPage = ({ event, onComplete }) => { /* ...código sin cambios... */ };
+const DistortionEventPage = ({ event, onComplete }) => {
+    // ...código del componente...
+    const [view, setView] = React.useState('visual');
+    const videoRef = React.useRef(null);
+
+    React.useEffect(() => {
+        if (view !== 'visual') return;
+
+        if (event.visual.type === 'video' && videoRef.current) {
+            videoRef.current.play().catch(e => {
+                console.error("Error al auto-reproducir video:", e);
+                setView('challenge'); 
+            });
+        } else if (event.visual.type === 'image') {
+            const timer = setTimeout(() => {
+                setView('challenge');
+            }, event.visual.duration);
+            return () => clearTimeout(timer);
+        }
+    }, [event, view]);
+
+    const handleVisualEnd = () => {
+        setView('challenge');
+    };
+
+    const ChallengeRenderer = () => {
+        const { challenge } = event;
+        const [feedback, setFeedback] = React.useState({ message: '', type: '' });
+        const [isLocked, setIsLocked] = React.useState(false);
+        const [answer, setAnswer] = React.useState('');
+        const [selectedOption, setSelectedOption] = React.useState('');
+        const [timer, setTimer] = React.useState(challenge.timeLimit || 0);
+
+        React.useEffect(() => {
+            if (challenge.type !== 'corrupt_transmission' || isLocked) return;
+            if (timer <= 0) {
+                handleSubmit(true); return;
+            }
+            const interval = setInterval(() => setTimer(t => t > 0 ? t - 1 : 0), 1000);
+            return () => clearInterval(interval);
+        }, [timer, isLocked]);
+
+        const handleSubmit = (isTimeout = false) => {
+            if (isLocked) return;
+            setIsLocked(true);
+            const isCorrect = !isTimeout && answer.trim() === challenge.correctAnswer;
+            const points = isCorrect ? challenge.bonusPoints : (isTimeout ? challenge.penaltyPoints : 0);
+            const message = isCorrect
+                ? `✔️ Señal recuperada. ¡Has ganado ${points} Fragmentos extra!`
+                : (isTimeout
+                    ? `❌ ¡Tiempo agotado! La Amenaza te ha costado ${Math.abs(points)} Fragmentos.`
+                    : '❌ Respuesta incorrecta. La conexión se perdió.');
+
+            setFeedback({ message, type: isCorrect ? 'success' : 'error' });
+            setTimeout(() => onComplete({ points }), 3000);
+        };
+        
+        const handleMultipleChoiceSubmit = () => {
+            if (isLocked || !selectedOption) return;
+            setIsLocked(true);
+            const isCorrect = selectedOption === challenge.correctAnswer;
+            const points = isCorrect ? challenge.bonusPoints : challenge.penaltyPoints;
+            const message = isCorrect 
+                ? `✔️ ¡Memoria intacta! Recuperas ${points} Fragmentos.` 
+                : `❌ Respuesta incorrecta. No has recuperado fragmentos.`;
+            
+            setFeedback({ message, type: isCorrect ? 'success' : 'error' });
+            setTimeout(() => onComplete({ points }), 3000);
+        };
+
+        const handleNarrativeContinue = () => {
+             if (isLocked) return;
+             setIsLocked(true);
+             onComplete({ points: 0 });
+        }
+
+        switch (challenge.type) {
+            case 'corrupt_transmission':
+                return (
+                    <div className="distortion-container">
+                        <h3>{challenge.title}</h3>
+                        <p>{challenge.message}</p>
+                        <div className="distortion-timer">⏳ {timer}s</div>
+                        <p className="distortion-challenge-text">{challenge.question}</p>
+                        <input type="text" placeholder="Último dígito" value={answer} onChange={(e) => setAnswer(e.target.value)} disabled={isLocked} />
+                        <button className="primary-button" onClick={() => handleSubmit(false)} disabled={isLocked}>RESPONDER</button>
+                        {feedback.message && <p className={`feedback ${feedback.type}`}>{feedback.message}</p>}
+                    </div>
+                );
+            case 'multiple_choice':
+                return (
+                    <div className="distortion-container">
+                        <h3>{challenge.title}</h3>
+                        <p>{challenge.message}</p>
+                        <p className="distortion-challenge-text">{challenge.question}</p>
+                        <ul className="trivia-options">
+                            {challenge.options.map(option => (
+                                <li 
+                                    key={option} 
+                                    className={selectedOption === option ? 'selected' : ''} 
+                                    onClick={() => !isLocked && setSelectedOption(option)}
+                                >
+                                    {option}
+                                </li>
+                            ))}
+                        </ul>
+                        <button className="primary-button" onClick={handleMultipleChoiceSubmit} disabled={isLocked || !selectedOption}>
+                            VERIFICAR
+                        </button>
+                        {feedback.message && <p className={`feedback ${feedback.type}`}>{feedback.message}</p>}
+                    </div>
+                );
+            case 'narrative_echo':
+                 return (
+                         <div className="distortion-container">
+                                 <h3>{challenge.title}</h3>
+                                 <p className="distortion-narrative-text">{challenge.message}</p>
+                                 <button className="primary-button" onClick={handleNarrativeContinue} disabled={isLocked}>CONTINUAR MISIÓN...</button>
+                       </div>
+                 );
+            default:
+                onComplete({ points: 0 });
+                return null;
+        }
+    };
+
+    return (
+        <div className="amenaza-modal-overlay">
+            <div className="amenaza-modal-content">
+                {view === 'visual' && event.visual.type === 'video' && (
+                    <video ref={videoRef} className="amenaza-visual" src={event.visual.src} onEnded={handleVisualEnd} muted playsInline />
+                )}
+                {view === 'visual' && event.visual.type === 'image' && (
+                    <img className="amenaza-visual" src={event.visual.src} alt="Interrupción de la Amenaza" />
+                )}
+                {view === 'challenge' && <ChallengeRenderer />}
+            </div>
+        </div>
+    );
+};
+
 const EnRutaPage = ({ nextLocation, onArrival, department, onFinishEarly }) => { /* ...código sin cambios... */ };
 const LongTravelPage = ({ onArrival, nextDepartment, onFinishEarly }) => { /* ...código sin cambios... */ };
 const EndGamePage = ({ score, finalTime, teamName }) => { /* ...código sin cambios... */ };
@@ -229,7 +191,7 @@ const getInitialState = () => ({
 });
 
 const App = () => {
-    // El código de tu componente App principal no necesita cambios aquí.
+    // El código de tu componente App principal no necesita cambios.
     const [appState, setAppState] = React.useState(() => {
         const savedDataJSON = localStorage.getItem('guardianesAppState');
         
